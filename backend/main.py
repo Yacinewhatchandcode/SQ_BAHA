@@ -192,7 +192,9 @@ async def websocket_endpoint(websocket: WebSocket):
         await manager.connect(websocket)
         
         # Start keepalive task if not already running
-        if not hasattr(app, 'keepalive_task'):
+        if not hasattr(app, 'keepalive_task') or app.keepalive_task.done():
+            if hasattr(app, 'keepalive_task') and not app.keepalive_task.done():
+                app.keepalive_task.cancel()
             app.keepalive_task = asyncio.create_task(keepalive_task())
         
         while True:
@@ -213,10 +215,18 @@ async def websocket_endpoint(websocket: WebSocket):
                     await manager.send_message(client_id, json.dumps({"type": "pong"}))
                     continue
                 
+                # Parse JSON message to extract content
+                try:
+                    parsed_message = json.loads(message)
+                    message_content = parsed_message.get("content", message)
+                except json.JSONDecodeError:
+                    # If not JSON, treat as plain text
+                    message_content = message
+                
                 # Process message with RAG agent
                 try:
                     response = await asyncio.wait_for(
-                        asyncio.to_thread(rag_agent.chat, message),
+                        asyncio.to_thread(rag_agent.chat, message_content),
                         timeout=30  # 30 second timeout for RAG processing
                     )
                 except asyncio.TimeoutError:
