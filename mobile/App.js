@@ -180,11 +180,14 @@ export default function App() {
     }
   };
 
-  const sendMessage = () => {
-    if (inputText.trim() && ws.current && ws.current.readyState === WebSocket.OPEN) {
-      setMessages(prev => [...prev, { type: 'user', content: inputText }]);
-      ws.current.send(JSON.stringify({ type: 'message', content: inputText }));
-      setInputText('');
+  const sendMessage = (message = null) => {
+    const messageToSend = message || inputText.trim();
+    if (messageToSend && ws.current && ws.current.readyState === WebSocket.OPEN) {
+      setMessages(prev => [...prev, { type: 'user', content: messageToSend }]);
+      ws.current.send(JSON.stringify({ type: 'message', content: messageToSend }));
+      if (!message) {
+        setInputText('');
+      }
       setIsTyping(true);
     } else {
       Alert.alert('Connection Error', 'Cannot send message. Please check your connection.');
